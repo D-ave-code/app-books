@@ -1,0 +1,73 @@
+plugins {
+    id 'java'
+    id 'application'
+    id "org.flywaydb.flyway" version "9.8.1"
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    helidonVersion = '3.0.2'
+    mainClass='io.helidon.microprofile.cdi.Main'
+}
+
+dependencies {
+    implementation platform("io.helidon:helidon-dependencies:${project.helidonVersion}")// para no poner a cada rato versiones
+    //implementation 'io.helidon.microprofile.bundles:helidon-microprofile'// instala todo lo de microprofile version x
+    implementation 'org.glassfish.jersey.media:jersey-media-json-binding'
+    implementation 'io.helidon.microprofile.server:helidon-microprofile-server'
+    implementation 'org.projectlombok:lombok:1.18.22'
+    runtimeOnly 'org.jboss:jandex'
+    //jdbi
+    implementation group: 'org.jdbi', name: 'jdbi3-core', version: '3.36.0'
+    implementation group: 'org.jdbi', name: 'jdbi3-sqlobject', version: '3.36.0'
+    //postgres
+    implementation 'org.postgresql:postgresql:42.5.1'
+    //pool de conexion
+    //implementation 'com.jolbox:bonecp:0.8.0.RELEASE'
+    //implementation 'org.apache.commons:commons-dbcp2:2.9.0'
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    //lombok
+    compileOnly 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    implementation group: 'org.flywaydb', name: 'flyway-core', version: '9.11.0'
+}
+
+flyway {
+   // url = 'jdbc:postgresql:distribuida'
+    //url = 'jdbc:postgresql://postgres-sql:5432/distribuida'
+    url = 'jdbc:postgresql:distribuida'
+    user = 'postgres'
+    password = 'postgres'
+    schemas = ['public']
+}
+
+sourceSets{
+    main{
+        output.resourcesDir = file("${buildDir}/classes/java/main")
+    }
+}
+
+task copyLibs(type: Copy) {
+    from configurations.runtimeClasspath
+    into 'build/libs/libs'
+}
+
+jar {
+    archiveFileName = "${project.name}.jar"
+    manifest {
+        attributes ('Main-Class': "${project.mainClass}" ,
+                'Class-Path': configurations.runtimeClasspath.files.collect { "libs/$it.name" }.join(' ')
+        )
+    }
+}
+
+application {
+    mainClass = "${project.mainClass}"
+}
