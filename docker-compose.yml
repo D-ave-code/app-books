@@ -1,0 +1,53 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:v2.9
+    command: --api.insecure=true --providers.docker
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  postgres-sql:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: distribuida
+    ports:
+      - 5432:5432
+
+  authpr-service:
+    image: d4vecode/quarqui:1.0.0
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_URL: jdbc:postgresql://postgres-sql:5432/distribuida
+    depends_on:
+      - postgres-sql
+      - traefik
+    deploy:
+      replicas: 2
+    #ports:
+     # - 9000:9000
+    labels:
+      - "traefik.http.routers.authpr-service.rule=Host(`author.localhost`)"
+      - "traefik.http.services.authpr-service.loadbalancer.server.port=9000"
+
+  books-service:
+    image: d4vecode/examen:1.0.0
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_URL: jdbc:postgresql://postgres-sql:5432/distribuida
+    depends_on:
+      - authpr-service
+      - traefik
+    deploy:
+      replicas: 3
+    #ports:
+     # - 7001:7001
+    labels:
+      - "traefik.http.routers.books-service.rule=Host(`book.localhost`)"
+      - "traefik.http.services.books-service.loadbalancer.server.port=7001"
